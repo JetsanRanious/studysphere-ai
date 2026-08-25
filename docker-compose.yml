@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: studysphere_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: studysphere_user
+      POSTGRES_PASSWORD: studysphere_password
+      POSTGRES_DB: studysphere_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: studysphere_backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://studysphere_user:studysphere_password@postgres:5432/studysphere_db
+      SECRET_KEY: studysphere-production-jwt-secret-key-2026
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: llama3
+      OLLAMA_EMBED_MODEL: nomic-embed-text
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_uploads:/app/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build: ./frontend
+    container_name: studysphere_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data:
+  backend_uploads:
