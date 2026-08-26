@@ -1,0 +1,8 @@
+{
+  "name": "StudySphere AI",
+  "description": "An AI-powered study companion with collaborative study rooms, document analysis, flashcards, AI chat, study planner, task tracker, and wellness breaks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

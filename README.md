@@ -2,11 +2,17 @@
 
 > **Your AI-Powered Academic Companion** — Intelligent Study Planning, RAG Document Q&A, Collaborative Study Rooms, Wellness Eye-Rest Reminders, and Cognitive Mini-Games.
 
+[![GitHub Repo](https://img.shields.io/badge/GitHub-jetsanranious%2Fstudysphere--ai-blue?logo=github)](https://github.com/jetsanranious)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-StudySphere%20AI-00C853?logo=google-cloud)](https://ais-pre-t3243hbrkaz4w3ulwds34z-144346548797.asia-east1.run.app)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/Frontend-React%2018%20%2B%20TypeScript-61DAFB.svg)](https://reactjs.org)
-[![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20CSS-38B2AC.svg)](https://tailwindcss.com)
-[![Ollama](https://img.shields.io/badge/AI-Ollama%20RAG-black.svg)](https://ollama.com)
+
+---
+
+## 🌐 Live & Public URLs
+
+- **Public Production App**: [https://ais-pre-t3243hbrkaz4w3ulwds34z-144346548797.asia-east1.run.app](https://ais-pre-t3243hbrkaz4w3ulwds34z-144346548797.asia-east1.run.app)
+- **Development App**: [https://ais-dev-t3243hbrkaz4w3ulwds34z-144346548797.asia-east1.run.app](https://ais-dev-t3243hbrkaz4w3ulwds34z-144346548797.asia-east1.run.app)
+- **GitHub Profile**: [https://github.com/jetsanranious](https://github.com/jetsanranious)
 
 ---
 
