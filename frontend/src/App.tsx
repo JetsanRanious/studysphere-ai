@@ -15,6 +15,7 @@ import { RoomDetailPage } from './pages/RoomDetailPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { DocumentChatPage } from './pages/DocumentChatPage';
 import { ChatGPTPage } from './pages/ChatGPTPage';
+import { GeminiPage } from './pages/GeminiPage';
 import { PlannerPage } from './pages/PlannerPage';
 import { TasksPage } from './pages/TasksPage';
 import { RelaxZonePage } from './pages/RelaxZonePage';
@@ -46,6 +47,7 @@ export const AppContent: React.FC = () => {
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/chat" element={<DocumentChatPage />} />
         <Route path="/chatgpt" element={<ChatGPTPage />} />
+        <Route path="/gemini" element={<GeminiPage />} />
         <Route path="/planner" element={<PlannerPage />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/relax" element={<RelaxZonePage />} />

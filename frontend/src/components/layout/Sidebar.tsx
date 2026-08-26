@@ -37,6 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenCreateRoom }) => {
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/planner', label: 'AI Planner', icon: CalendarDays },
     { to: '/chatgpt', label: 'ChatGPT', icon: Sparkles },
+    { to: '/gemini', label: 'Gemini AI', icon: Sparkles },
     { to: '/chat', label: 'Document Chat', icon: Bot },
     { to: '/documents', label: 'Documents', icon: FileText },
     { to: '/tasks', label: 'Tasks & Deadlines', icon: CheckSquare },
