@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   demoLogin: (email?: string, name?: string) => Promise<void>;
   register: (email: string, pass: string, name: string) => Promise<void>;
+  googleLogin: () => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -63,6 +64,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(data.user);
   };
 
+  const googleLogin = async () => {
+    // Uses the backend /auth/google endpoint which natively mocks Google Student
+    const data = await authService.googleAuth('mock-google-credential');
+    localStorage.setItem('studysphere_token', data.access_token);
+    localStorage.setItem('studysphere_user', JSON.stringify(data.user));
+    setToken(data.access_token);
+    setUser(data.user);
+  };
+
   const logout = () => {
     localStorage.removeItem('studysphere_token');
     localStorage.removeItem('studysphere_user');
@@ -81,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, demoLogin, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, demoLogin, register, googleLogin, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

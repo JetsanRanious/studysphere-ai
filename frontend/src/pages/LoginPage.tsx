@@ -12,7 +12,7 @@ export const LoginPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login, register, demoLogin } = useAuth();
+  const { login, register, demoLogin, googleLogin } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -42,7 +42,20 @@ export const LoginPage: React.FC = () => {
       showToast('Logged in as Jetsan (Demo Account)', 'success');
       navigate('/dashboard');
     } catch (err) {
-      showToast('Demo login error', 'error');
+      showToast('Demo login error. Check API configuration.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+      await googleLogin();
+      showToast('Successfully signed in with Google!', 'success');
+      navigate('/dashboard');
+    } catch (err) {
+      showToast('Google login failed', 'error');
     } finally {
       setLoading(false);
     }
@@ -85,8 +98,9 @@ export const LoginPage: React.FC = () => {
         {/* Google Login Simulation */}
         <button
           type="button"
-          onClick={handleDemoLogin}
-          className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors mb-6 shadow-xs"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors mb-6 shadow-xs disabled:opacity-50"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
