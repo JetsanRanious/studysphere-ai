@@ -10,7 +10,6 @@
 
 ## 🌐 Live & Public URLs
 
-- **Public Production App**: [https://ais-pre-t3243hbrkaz4w3ulwds34z-144346548797.asia-east1.run.app](https://ais-pre-t3243hbrkaz4w3ulwds34z-144346548797.asia-east1.run.app)
 - **Development App**: [https://ais-dev-t3243hbrkaz4w3ulwds34z-144346548797.asia-east1.run.app](https://ais-dev-t3243hbrkaz4w3ulwds34z-144346548797.asia-east1.run.app)
 - **GitHub Profile**: [https://github.com/jetsanranious](https://github.com/jetsanranious)
 
