@@ -11,7 +11,8 @@ import {
   Plus,
   Play,
   FileText,
-  BookOpen
+  BookOpen,
+  Target
 } from 'lucide-react';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -19,12 +20,14 @@ import { Badge } from '../components/common/Badge';
 import { StudyClock } from '../components/common/StudyClock';
 import { useAuth } from '../contexts/AuthContext';
 import { useStudyTimer } from '../contexts/StudyTimerContext';
+import { useFocusMode } from '../contexts/FocusModeContext';
 import { analyticsService, roomService, taskService, aiService } from '../services/allServices';
 import { AnalyticsOverview, StudyRoom, StudyTask, Deadline } from '../types';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const { startSession } = useStudyTimer();
+  const { isFocusMode, toggleFocusMode, setFocusMode } = useFocusMode();
   const navigate = useNavigate();
 
   const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null);
@@ -58,7 +61,7 @@ export const DashboardPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Good morning, {user?.full_name?.split(' ')[0] || 'Jetsan'} 👋
+            Good morning, {user?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Scholar'} 👋
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Let's make today's study session productive. Here is your overview for today.
@@ -72,6 +75,20 @@ export const DashboardPage: React.FC = () => {
           <Button variant="outline" size="sm" onClick={() => navigate('/planner')}>
             <Calendar className="w-4 h-4 mr-1.5" /> AI Planner
           </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              startSession('Deep Focus Sprint', undefined, 25);
+              setFocusMode(true);
+            }}
+            className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+            title="Start 25m Pomodoro with distraction-free Focus Mode activated"
+          >
+            <Target className="w-4 h-4 mr-1.5 text-indigo-600" /> Focus Sprint
+          </Button>
+
           <Button variant="primary" size="sm" onClick={() => startSession('Cloud Security')}>
             <Play className="w-4 h-4 mr-1.5" /> Quick Study (45m)
           </Button>

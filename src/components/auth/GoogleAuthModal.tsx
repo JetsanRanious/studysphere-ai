@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mail, User, ShieldCheck, Key, ArrowRight, CheckCircle, ExternalLink } from 'lucide-react';
+import { X, Mail, User, ShieldCheck, ArrowRight, CheckCircle2, Zap, LogIn, UserPlus } from 'lucide-react';
 import { Button } from '../common/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -19,16 +19,34 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
   const { googleLogin } = useAuth();
   const { showToast } = useToast();
 
-  const [realGmail, setRealGmail] = useState('jetsanranious@gmail.com');
-  const [realName, setRealName] = useState('Jetsan Ranious');
-  const [googleClientId, setGoogleClientId] = useState('');
-  const [showConfig, setShowConfig] = useState(false);
+  // Load saved credentials ONLY if this specific local device previously logged in
+  const [savedEmail, setSavedEmail] = useState<string | null>(null);
+  const [savedName, setSavedName] = useState<string | null>(null);
+  const [useDifferentAccount, setUseDifferentAccount] = useState(false);
+
+  const [realGmail, setRealGmail] = useState('');
+  const [realName, setRealName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState('');
   const [gsiInitialized, setGsiInitialized] = useState(false);
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Fetch google client ID config if available
+    if (isOpen) {
+      const storedEmail = localStorage.getItem('studysphere_saved_google_email');
+      const storedName = localStorage.getItem('studysphere_saved_google_name');
+      if (storedEmail) {
+        setSavedEmail(storedEmail);
+        setSavedName(storedName || storedEmail.split('@')[0]);
+      } else {
+        setSavedEmail(null);
+        setSavedName(null);
+        setUseDifferentAccount(true);
+      }
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     authService.getGoogleConfig()
       .then((cfg) => {
         if (cfg.client_id) {
@@ -41,7 +59,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    const clientIdToUse = googleClientId || import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+    const clientIdToUse = googleClientId || (window as any)?.__ENV_GOOGLE_CLIENT_ID || '';
     if (clientIdToUse && (window as any).google?.accounts?.id && googleBtnRef.current) {
       try {
         (window as any).google.accounts.id.initialize({
@@ -51,10 +69,10 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
               setLoading(true);
               try {
                 await googleLogin(response.credential);
-                showToast('Signed in with Google ID token!', 'success');
+                showToast('Signed in with your verified Google account!', 'success');
                 onSuccess();
               } catch (err: any) {
-                showToast(err.response?.data?.detail || 'Google sign-in verification failed.', 'error');
+                showToast(err.response?.data?.detail || 'Google sign-in failed.', 'error');
               } finally {
                 setLoading(false);
               }
@@ -79,73 +97,45 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSignInWithGmail = async (targetEmail: string, targetName: string) => {
-    if (!targetEmail || !targetEmail.includes('@')) {
-      showToast('Please provide a valid Gmail address', 'error');
+  const handleDirectGoogleLogin = async (customEmail?: string, customName?: string) => {
+    const emailToUse = (customEmail || realGmail).trim().toLowerCase();
+    const nameToUse = (customName || realName).trim();
+
+    if (!emailToUse || !emailToUse.includes('@')) {
+      showToast('Please enter a valid Gmail / Google email address', 'error');
       return;
     }
+
     try {
       setLoading(true);
-      const cleanName = targetName.trim() || targetEmail.split('@')[0];
-      const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(cleanName)}`;
-      
       await googleLogin({
-        email: targetEmail.trim().toLowerCase(),
-        full_name: cleanName,
-        avatar_url: avatarUrl,
+        email: emailToUse,
+        full_name: nameToUse || undefined,
+        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(nameToUse || emailToUse)}`
       });
 
-      showToast(`Welcome! Signed in with ${targetEmail}`, 'success');
+      // Save to this local browser device for quick re-login
+      localStorage.setItem('studysphere_saved_google_email', emailToUse);
+      if (nameToUse) {
+        localStorage.setItem('studysphere_saved_google_name', nameToUse);
+      }
+
+      showToast(`Welcome back, ${nameToUse || emailToUse}!`, 'success');
       onSuccess();
     } catch (err: any) {
-      console.error('Google Gmail sign-in error:', err);
-      showToast(err.response?.data?.detail || 'Google sign in failed.', 'error');
+      showToast(err.response?.data?.detail || 'Sign-in failed. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLaunchGooglePopup = () => {
-    const clientId = googleClientId || import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if ((window as any).google?.accounts?.oauth2 && clientId) {
-      try {
-        const client = (window as any).google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: 'openid email profile',
-          callback: async (tokenResponse: any) => {
-            if (tokenResponse.access_token) {
-              setLoading(true);
-              try {
-                // Fetch user info from Google's userinfo endpoint
-                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-                });
-                const info = await res.json();
-                await googleLogin({
-                  email: info.email,
-                  full_name: info.name,
-                  avatar_url: info.picture,
-                });
-                showToast(`Signed in as ${info.email}!`, 'success');
-                onSuccess();
-              } catch (e) {
-                console.error('Failed fetching Google userinfo:', e);
-                showToast('Failed to retrieve Google profile.', 'error');
-              } finally {
-                setLoading(false);
-              }
-            }
-          },
-        });
-        client.requestAccessToken();
-        return;
-      } catch (err) {
-        console.warn('OAuth2 client prompt error:', err);
-      }
+  const getInitials = (name: string, email: string) => {
+    if (name) {
+      const parts = name.trim().split(' ');
+      if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+      return name.slice(0, 2).toUpperCase();
     }
-
-    // Direct fallback to real Gmail sign-in
-    handleSignInWithGmail(realGmail, realName);
+    return email ? email.slice(0, 2).toUpperCase() : 'G';
   };
 
   return (
@@ -164,12 +154,12 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">Sign in with Google</h3>
-              <p className="text-xs text-slate-500">Authenticate using your real Gmail account</p>
+              <p className="text-xs text-slate-500">Secure Student Learning Workspace</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -177,123 +167,129 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-5">
-          {/* Quick Account 1-Click Card */}
-          <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-100/80 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-xs">
-                JR
+          {/* If this device has a saved profile from a previous session on this browser */}
+          {savedEmail && !useDifferentAccount && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-sky-50/80 border border-blue-200/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center">
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-600 inline" />
+                  Saved on this device
+                </span>
+                <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                  1-Click Resume
+                </span>
               </div>
+
+              <div className="flex items-center space-x-3 bg-white p-2.5 rounded-xl border border-blue-100 shadow-2xs">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-extrabold text-sm shadow-xs shrink-0">
+                  {getInitials(savedName || '', savedEmail)}
+                </div>
+                <div className="truncate flex-1">
+                  <p className="text-xs font-bold text-slate-800">{savedName || 'Google User'}</p>
+                  <p className="text-[11px] text-slate-500 truncate font-mono">{savedEmail}</p>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                isLoading={loading}
+                onClick={() => handleDirectGoogleLogin(savedEmail, savedName || undefined)}
+                className="w-full !font-bold !py-2.5 !bg-blue-600 hover:!bg-blue-700 shadow-sm shadow-blue-500/20"
+              >
+                <Zap className="w-4 h-4 mr-1.5 text-amber-300" />
+                Continue as {savedName || savedEmail.split('@')[0]}
+                <ArrowRight className="w-4 h-4 ml-1.5" />
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => setUseDifferentAccount(true)}
+                className="w-full text-center text-xs text-slate-500 hover:text-blue-600 font-medium py-1 cursor-pointer transition-colors"
+              >
+                Sign in with a different Gmail account →
+              </button>
+            </div>
+          )}
+
+          {/* Official Google Identity Button (GSI) if available */}
+          <div ref={googleBtnRef} className={gsiInitialized ? 'w-full flex justify-center mb-1' : 'hidden'} />
+
+          {/* Direct Custom Gmail Form */}
+          {(!savedEmail || useDifferentAccount) && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleDirectGoogleLogin();
+              }}
+              className="space-y-3.5"
+            >
               <div>
-                <p className="text-xs font-bold text-slate-800">Jetsan Ranious</p>
-                <p className="text-[11px] text-blue-700 font-medium">jetsanranious@gmail.com</p>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Your Gmail Address</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="email"
+                    required
+                    value={realGmail}
+                    onChange={(e) => setRealGmail(e.target.value)}
+                    placeholder="your.account@gmail.com"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-slate-800"
+                    autoFocus
+                  />
+                </div>
               </div>
-            </div>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              isLoading={loading}
-              onClick={() => handleSignInWithGmail('jetsanranious@gmail.com', 'Jetsan Ranious')}
-              className="!text-xs !py-1.5"
-            >
-              Sign In
-            </Button>
-          </div>
 
-          {/* Official GSI Button Container if active */}
-          <div ref={googleBtnRef} className={gsiInitialized ? 'w-full flex justify-center' : 'hidden'} />
-
-          {/* Custom Gmail Form */}
-          <div className="space-y-3 pt-1">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-700">Or enter your Gmail ID</label>
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Real ID</span>
-            </div>
-
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-              <input
-                type="email"
-                value={realGmail}
-                onChange={(e) => setRealGmail(e.target.value)}
-                placeholder="your.name@gmail.com"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-slate-800"
-              />
-            </div>
-
-            <div className="relative">
-              <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-              <input
-                type="text"
-                value={realName}
-                onChange={(e) => setRealName(e.target.value)}
-                placeholder="Your Full Name (e.g. Jetsan Ranious)"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-slate-800"
-              />
-            </div>
-
-            <Button
-              type="button"
-              variant="primary"
-              size="lg"
-              isLoading={loading}
-              onClick={() => handleSignInWithGmail(realGmail, realName)}
-              className="w-full !font-semibold !mt-2"
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Continue with {realGmail || 'Gmail'}
-            </Button>
-          </div>
-
-          {/* Optional Google Client ID settings toggle */}
-          <div className="pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setShowConfig(!showConfig)}
-              className="text-[11px] text-slate-400 hover:text-slate-600 flex items-center space-x-1.5 font-medium transition-colors"
-            >
-              <Key className="w-3.5 h-3.5" />
-              <span>{showConfig ? 'Hide Google OAuth Client ID' : 'Configure Google OAuth 2.0 Client ID'}</span>
-            </button>
-
-            {showConfig && (
-              <div className="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
-                <p className="text-[11px] text-slate-500">
-                  Provide your Google Cloud Console OAuth 2.0 Web Client ID:
-                </p>
-                <input
-                  type="text"
-                  value={googleClientId}
-                  onChange={(e) => setGoogleClientId(e.target.value)}
-                  placeholder="e.g. 123456789-abc.apps.googleusercontent.com"
-                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs focus:outline-none bg-white"
-                />
-                {googleClientId && (
-                  <Button
-                    type="button"
-                    variant="soft"
-                    size="sm"
-                    onClick={handleLaunchGooglePopup}
-                    className="w-full !text-xs !py-1"
-                  >
-                    <ExternalLink className="w-3 h-3 mr-1.5" />
-                    Launch Google OAuth Popup
-                  </Button>
-                )}
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Your Full Name (Optional)</label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="text"
+                    value={realName}
+                    onChange={(e) => setRealName(e.target.value)}
+                    placeholder="e.g. Alex Smith"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-slate-800"
+                  />
+                </div>
               </div>
-            )}
-          </div>
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                isLoading={loading}
+                className="w-full !font-bold !mt-2 shadow-sm shadow-blue-500/20"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Sign In with My Google Profile
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+
+              {savedEmail && useDifferentAccount && (
+                <button
+                  type="button"
+                  onClick={() => setUseDifferentAccount(false)}
+                  className="w-full text-center text-xs text-slate-500 hover:text-blue-600 font-medium py-1 cursor-pointer transition-colors"
+                >
+                  ← Back to saved account ({savedEmail})
+                </button>
+              )}
+            </form>
+          )}
         </div>
 
         {/* Footer */}
         <div className="bg-slate-50 px-6 py-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
           <div className="flex items-center space-x-1">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Secure Google OAuth authentication</span>
+            <span>Dual Gemini 3.7 & ChatGPT 4o Synced</span>
           </div>
-          <span>StudySphere AI</span>
+          <span>Independent User Isolation</span>
         </div>
       </div>
     </div>
   );
 };
+

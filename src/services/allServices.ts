@@ -38,8 +38,31 @@ export const authService = {
     const res = await api.post<{ access_token: string; user: User }>('/auth/google', body);
     return res.data;
   },
+  sendVerificationCode: async (email: string, full_name?: string) => {
+    const res = await api.post<{ success: boolean; message: string; verification_code: string }>('/auth/send-verification-code', {
+      email,
+      full_name
+    });
+    return res.data;
+  },
+  verifyCode: async (email: string, code: string, full_name?: string) => {
+    const res = await api.post<{ access_token: string; user: User }>('/auth/verify-code', {
+      email,
+      code,
+      full_name
+    });
+    return res.data;
+  },
   getMe: async () => {
     const res = await api.get<User>('/auth/me');
+    return res.data;
+  },
+  getProfile: async () => {
+    const res = await api.get<User>('/profile');
+    return res.data;
+  },
+  getGoogleAuthUrl: async () => {
+    const res = await api.get<{ url: string; client_id: string; redirect_uri: string }>('/auth/google/url');
     return res.data;
   },
   updateProfile: async (data: Partial<User['profile']> & { full_name?: string; avatar_url?: string }) => {
@@ -133,17 +156,21 @@ export const aiService = {
     roomId?: number,
     provider: string = 'auto',
     openaiApiKey?: string,
-    openaiModel: string = 'gpt-4o'
+    openaiModel: string = 'gpt-4o',
+    model: string = 'gemini-3.7-flash',
+    persona: string = 'academic'
   ) => {
     const storedKey = openaiApiKey || localStorage.getItem('studysphere_openai_key') || undefined;
-    const res = await api.post<{ response: string; session_id: number; sources: any[]; model_used: string }>('/ai/chat', {
+    const res = await api.post<{ response: string; session_id: number; sources: any[]; model_used: string; response_time_ms?: number }>('/ai/chat', {
       message,
       session_id: sessionId,
       document_id: documentId,
       room_id: roomId,
       provider,
       openai_api_key: storedKey,
-      openai_model: openaiModel
+      openai_model: openaiModel,
+      model,
+      persona
     });
     return res.data;
   },

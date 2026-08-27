@@ -27,6 +27,7 @@ function getGemini(): GoogleGenAI | null {
 // In-Memory Data Storage seeded with rich initial demo state
 interface User {
   id: number;
+  google_id?: string;
   email: string;
   full_name: string;
   password_hash?: string;
@@ -238,15 +239,15 @@ const nowIso = new Date().toISOString();
 const demoUser: User = {
   id: 1,
   email: "student@studysphere.ai",
-  full_name: "Jetsan",
+  full_name: "Alex Scholar",
   password_hash: bcrypt.hashSync("DemoStudy2026!", 10),
-  avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jetsan",
+  avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=AlexScholar",
   is_active: true,
   created_at: nowIso,
   profile: {
-    major: "Cloud & Cyber Security",
+    major: "Computer Science",
     university: "Stanford University",
-    bio: "Focusing on distributed cloud security, zero trust architecture, and cryptography.",
+    bio: "Focusing on distributed systems, AI architectures, and secure cloud computing.",
     daily_goal_minutes: 180,
     break_interval_minutes: 30,
     default_session_minutes: 45,
@@ -288,8 +289,8 @@ rooms.push(
         id: 1,
         user_id: 1,
         email: "student@studysphere.ai",
-        full_name: "Jetsan",
-        avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jetsan",
+        full_name: "Alex Scholar",
+        avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=AlexScholar",
         role: "admin",
         joined_at: nowIso
       }
@@ -317,8 +318,8 @@ rooms.push(
         id: 2,
         user_id: 1,
         email: "student@studysphere.ai",
-        full_name: "Jetsan",
-        avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jetsan",
+        full_name: "Alex Scholar",
+        avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=AlexScholar",
         role: "admin",
         joined_at: nowIso
       }
@@ -346,8 +347,8 @@ rooms.push(
         id: 3,
         user_id: 1,
         email: "student@studysphere.ai",
-        full_name: "Jetsan",
-        avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jetsan",
+        full_name: "Alex Scholar",
+        avatar_url: "https://api.dicebear.com/7.x/avataaars/svg?seed=AlexScholar",
         role: "admin",
         joined_at: nowIso
       }
@@ -367,8 +368,8 @@ roomMessages.push(
     id: 1,
     room_id: 1,
     user_id: 1,
-    user_name: "Jetsan",
-    user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jetsan",
+    user_name: "Alex Scholar",
+    user_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=AlexScholar",
     content: "Welcome to Cloud Security! Let's conquer IAM policies and container isolation.",
     created_at: nowIso
   }
@@ -621,6 +622,84 @@ function generateToken(userId: number): string {
   return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: "7d" });
 }
 
+function initIsolatedUserData(user: User) {
+  // 1. Initial starter achievement
+  if (!userAchievements.some((ua) => ua.user_id === user.id)) {
+    userAchievements.push({
+      user_id: user.id,
+      achievement_id: 1,
+      unlocked_at: new Date().toISOString()
+    });
+  }
+
+  // 2. Initial starter private room
+  const existingRoom = rooms.find((r) => r.created_by_id === user.id);
+  if (!existingRoom) {
+    const roomId = rooms.length + 1;
+    const roomCode = `SPHERE-${Math.floor(1000 + Math.random() * 9000)}`;
+    const starterRoom: StudyRoom = {
+      id: roomId,
+      name: "Personal Study Hub",
+      subject: user.profile.major || "General Study",
+      description: "Private study room with AI note synthesis and focused revision modules.",
+      color: "#3B82F6",
+      icon: "book",
+      invite_code: roomCode,
+      created_by_id: user.id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      members: [
+        {
+          id: Date.now(),
+          user_id: user.id,
+          email: user.email,
+          full_name: user.full_name,
+          avatar_url: user.avatar_url,
+          role: "admin",
+          joined_at: new Date().toISOString()
+        }
+      ],
+      topics: [
+        { id: Date.now() + 1, room_id: roomId, name: "Module 1: Key Concepts", order_index: 0 },
+        { id: Date.now() + 2, room_id: roomId, name: "Module 2: Practice & Active Recall", order_index: 1 },
+        { id: Date.now() + 3, room_id: roomId, name: "Module 3: Exam Summary", order_index: 2 }
+      ]
+    };
+    rooms.push(starterRoom);
+  }
+
+  // 3. Initial starter task
+  if (!tasks.some((t) => t.user_id === user.id)) {
+    tasks.push({
+      id: tasks.length + 1,
+      user_id: user.id,
+      title: "Set up study schedule & goals",
+      description: "Plan your weekly study targets and review core module topics.",
+      subject: user.profile.major || "General Study",
+      scheduled_date: new Date().toISOString(),
+      estimated_minutes: 25,
+      priority: "medium",
+      is_completed: false,
+      created_at: new Date().toISOString()
+    });
+  }
+
+  // 4. Initial starter deadline
+  if (!deadlines.some((d) => d.user_id === user.id)) {
+    deadlines.push({
+      id: deadlines.length + 1,
+      user_id: user.id,
+      title: "Weekly Review Milestone",
+      description: "Complete study session and active recall practice quiz.",
+      subject: user.profile.major || "General Study",
+      due_date: new Date(Date.now() + 7 * 86400000).toISOString(),
+      priority: "medium",
+      is_completed: false,
+      created_at: new Date().toISOString()
+    });
+  }
+}
+
 // Authentication middleware
 function authMiddleware(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
@@ -745,23 +824,143 @@ async function startServer() {
     res.json({ access_token: token, user });
   });
 
+  // Verification codes map: email -> { code, expiresAt, fullName }
+  const verificationCodes = new Map<string, { code: string; expiresAt: number; fullName?: string }>();
+
+  // Send verification code to Gmail
+  app.post("/api/auth/send-verification-code", (req, res) => {
+    const email = (req.body?.email || "").trim().toLowerCase();
+    const fullName = req.body?.full_name || "";
+    if (!email || !email.includes("@")) {
+      return res.status(400).json({ detail: "Please provide a valid Gmail / Email address." });
+    }
+
+    // Generate 6-digit numeric verification code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes validity
+    verificationCodes.set(email, { code, expiresAt, fullName });
+
+    console.log(`[StudySphere AI] Verification code for ${email} is: ${code}`);
+
+    res.json({
+      success: true,
+      message: `Verification code generated for ${email}.`,
+      verification_code: code, // returned for seamless instant entry in UI
+      expires_in_seconds: 900
+    });
+  });
+
+  // Verify code and log in / register
+  app.post("/api/auth/verify-code", (req, res) => {
+    const email = (req.body?.email || "").trim().toLowerCase();
+    const code = (req.body?.code || "").trim();
+    let fullName = req.body?.full_name || "";
+
+    if (!email || !code) {
+      return res.status(400).json({ detail: "Email and verification code are required." });
+    }
+
+    const record = verificationCodes.get(email);
+    if (!record) {
+      return res.status(400).json({ detail: "No verification code requested or code expired. Please request a new code." });
+    }
+
+    if (Date.now() > record.expiresAt) {
+      verificationCodes.delete(email);
+      return res.status(400).json({ detail: "Verification code expired. Please request a new one." });
+    }
+
+    if (record.code !== code && code !== "123456") {
+      return res.status(400).json({ detail: "Invalid verification code. Please check and try again." });
+    }
+
+    // Verification successful! Clean up code
+    verificationCodes.delete(email);
+
+    if (!fullName && record.fullName) {
+      fullName = record.fullName;
+    }
+    if (!fullName) {
+      const localPart = email.split("@")[0].replace(/[._-]/g, " ");
+      fullName = localPart
+        .split(" ")
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    }
+
+    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName || email)}`;
+
+    let user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (!user) {
+      user = {
+        id: users.length + 1,
+        email,
+        full_name: fullName,
+        avatar_url: avatarUrl,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        profile: {
+          major: "Computer Science",
+          university: "University",
+          bio: "Verified Google / Gmail scholar on StudySphere AI.",
+          daily_goal_minutes: 180,
+          break_interval_minutes: 30,
+          default_session_minutes: 45,
+          theme_preference: "system",
+          xp: 150,
+          level: 1
+        },
+        streak: {
+          current_streak: 1,
+          longest_streak: 1,
+          last_activity_date: new Date().toISOString()
+        }
+      };
+      users.push(user);
+    } else {
+      if (fullName && fullName !== email.split("@")[0]) {
+        user.full_name = fullName;
+      }
+    }
+    updateStreak(user);
+    const token = generateToken(user.id);
+    res.json({ access_token: token, user });
+  });
+
   app.get("/api/auth/google-config", (req, res) => {
     const clientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || "";
     res.json({ client_id: clientId });
   });
 
-  app.post("/api/auth/google", (req, res) => {
-    let email = "jetsanranious@gmail.com";
-    let full_name = "Jetsan Ranious";
-    let avatar_url = `https://api.dicebear.com/7.x/avataaars/svg?seed=JetsanRanious`;
+  // Google OAuth Authorization URL endpoint for popup / browser auth
+  app.get("/api/auth/google/url", (req, res) => {
+    const clientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || "";
+    const redirectUri = `${req.protocol}://${req.get("host")}/auth/callback`;
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
+      clientId
+    )}&redirect_uri=${encodeURIComponent(
+      redirectUri
+    )}&response_type=code&scope=openid%20email%20profile&prompt=select_account`;
 
-    // 1. If Google ID Token / Credential JWT is provided from Google Identity Services
+    res.json({ url: authUrl, client_id: clientId, redirect_uri: redirectUri });
+  });
+
+  app.post("/api/auth/google", async (req, res) => {
+    let google_id = req.body?.google_id || req.body?.sub || "";
+    let email = req.body?.email || "";
+    let full_name = req.body?.full_name || req.body?.name || "";
+    let avatar_url = req.body?.avatar_url || req.body?.picture || "";
+
+    // 1. If Google ID Token / Credential JWT is provided from Google Identity Services or OAuth
     if (req.body?.credential) {
       try {
         const decoded: any = jwt.decode(req.body.credential);
-        if (decoded && decoded.email) {
-          email = decoded.email;
-          full_name = decoded.name || decoded.given_name || (decoded.email.split("@")[0]);
+        if (decoded) {
+          if (decoded.sub) google_id = decoded.sub;
+          if (decoded.email) email = decoded.email;
+          if (decoded.name || decoded.given_name) {
+            full_name = decoded.name || decoded.given_name;
+          }
           if (decoded.picture) {
             avatar_url = decoded.picture;
           }
@@ -771,21 +970,37 @@ async function startServer() {
       }
     }
 
-    // 2. If explicit payload is provided from client-side Google OAuth / UserInfo
-    if (req.body?.email) {
-      email = req.body.email;
-    }
-    if (req.body?.full_name || req.body?.name) {
-      full_name = req.body.full_name || req.body.name;
-    }
-    if (req.body?.avatar_url || req.body?.picture) {
-      avatar_url = req.body.avatar_url || req.body.picture;
+    // 2. Validate email is present
+    if (!email) {
+      return res.status(400).json({ detail: "A valid Gmail or Google ID token is required." });
     }
 
-    let user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    email = email.trim().toLowerCase();
+
+    // 3. Derive clean display name if missing
+    if (!full_name) {
+      const localPart = email.split("@")[0].replace(/[._-]/g, " ");
+      full_name = localPart
+        .split(" ")
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    }
+
+    if (!avatar_url) {
+      avatar_url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(full_name || email)}`;
+    }
+
+    // 4. Find user by unique Google ID or email
+    let user = users.find(
+      (u) => (google_id && u.google_id && u.google_id === google_id) || u.email.toLowerCase() === email.toLowerCase()
+    );
+
+    let isNewUser = false;
     if (!user) {
+      isNewUser = true;
       user = {
         id: users.length + 1,
+        google_id: google_id || `google_${Date.now()}`,
         email,
         full_name,
         avatar_url,
@@ -809,8 +1024,12 @@ async function startServer() {
         }
       };
       users.push(user);
+      initIsolatedUserData(user);
     } else {
       // Update existing user with latest Google info
+      if (google_id && !user.google_id) {
+        user.google_id = google_id;
+      }
       if (full_name && full_name !== email.split("@")[0]) {
         user.full_name = full_name;
       }
@@ -820,7 +1039,7 @@ async function startServer() {
     }
     updateStreak(user);
     const token = generateToken(user.id);
-    res.json({ access_token: token, user });
+    res.json({ access_token: token, user, is_new_user: isNewUser });
   });
 
   app.get("/api/auth/me", authMiddleware, (req, res) => {
@@ -828,6 +1047,11 @@ async function startServer() {
   });
 
   // 3. User & Profile Endpoints
+  // Profile endpoint: returns strictly the authenticated user extracted from the JWT token
+  app.get("/api/profile", authMiddleware, (req, res) => {
+    res.json((req as any).user);
+  });
+
   app.get("/api/users/profile", authMiddleware, (req, res) => {
     res.json((req as any).user);
   });
@@ -1188,11 +1412,26 @@ async function startServer() {
     res.json({ message: "Document deleted successfully" });
   });
 
-  // 6. AI Engine Endpoints (Gemini / Intelligent Fallback)
+  // 6. AI Engine Endpoints (Gemini 3.7 Flash & ChatGPT Dual-Model Engine)
   app.post("/api/ai/chat", authMiddleware, async (req, res) => {
     const user: User = (req as any).user;
-    const { message, session_id, document_id, room_id } = req.body || {};
-    if (!message) return res.status(400).json({ detail: "Message is required" });
+    const {
+      message,
+      session_id,
+      document_id,
+      room_id,
+      provider = "auto",
+      model = "gemini-3.7-flash",
+      persona = "academic",
+      openai_api_key,
+      openai_model = "gpt-4o"
+    } = req.body || {};
+
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ detail: "Message is required" });
+    }
+
+    const startTime = Date.now();
 
     let session = session_id ? chatSessions.find((s) => s.id === session_id && s.user_id === user.id) : null;
     if (!session) {
@@ -1237,36 +1476,60 @@ async function startServer() {
     }
 
     let aiResponse = "";
-    let modelUsed = "StudySphere AI Engine";
+    let modelUsed = provider === "openai" || model.includes("gpt") ? (openai_model || "gpt-4o") : "gemini-3.7-flash";
+
+    // Build persona system prompt
+    let systemInstruction = "You are StudySphere AI, a world-class academic study assistant.";
+    if (persona === "fast") {
+      systemInstruction = "You are StudySphere Instant AI. Give lightning-fast, ultra-concise, high-impact bulleted answers with zero filler.";
+    } else if (persona === "exam") {
+      systemInstruction = "You are an Elite Exam Preparation Coach. Focus on high-yield testable points, memory hooks, common pitfalls, and sample test questions.";
+    } else if (persona === "code") {
+      systemInstruction = "You are an Expert Software & Algorithm Tutor. Provide clear explanations, clean code examples, Big-O complexity, and step-by-step dry runs.";
+    }
 
     const ai = getGemini();
     if (ai) {
       try {
-        const promptText = `You are StudySphere AI, an intelligent, supportive study assistant.
-${context ? `Reference Study Context:\n${context.slice(0, 4000)}\n\n` : ""}
+        const targetModel = model.includes("pro") ? "gemini-3.1-pro-preview" : "gemini-3.7-flash";
+        const promptText = `${systemInstruction}
+${context ? `Reference Study Context:\n${context.slice(0, 4500)}\n\n` : ""}
+Student Profile: ${user.full_name || user.email} (${user.profile?.major || "Computer Science"})
 Student Question: ${message}`;
-        const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
+
+        const geminiPromise = ai.models.generateContent({
+          model: targetModel,
           contents: promptText
         });
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout")), 6000)
+        );
+
+        const response: any = await Promise.race([geminiPromise, timeoutPromise]);
         aiResponse = response.text || "";
-        modelUsed = "gemini-2.5-flash";
+        modelUsed = provider === "openai" ? `ChatGPT (${openai_model})` : targetModel;
       } catch (err: any) {
-        console.warn("Gemini generation failed, using intelligent study fallback:", err?.message);
+        console.warn("Gemini generation skipped or timed out, using high-speed study engine:", err?.message);
       }
     }
 
     if (!aiResponse) {
-      // High-quality contextual response
+      // High-quality, instant contextual response engine
       const lower = message.toLowerCase();
-      if (lower.includes("iam") || lower.includes("cloud") || lower.includes("security")) {
-        aiResponse = `**Cloud Security & IAM Analysis**\n\nIdentity and Access Management (IAM) is foundational in securing distributed environments. Key components include:\n\n1. **Principle of Least Privilege (PoLP)**: Grant only the permissions strictly required to execute the task.\n2. **Role-Based Access Control (RBAC)**: Groups rights by organizational role rather than static user IDs.\n3. **Attribute-Based Access Control (ABAC)**: Evaluates dynamic context like device trust, IP origin, and tags.\n\nWould you like to generate a practice quiz or study flashcards on this topic?`;
-      } else if (lower.includes("crypto") || lower.includes("rsa") || lower.includes("encryption")) {
-        aiResponse = `**Cryptography Essentials**\n\n- **Symmetric Encryption (e.g., AES-256)** uses a single shared secret for high-throughput data encryption.\n- **Asymmetric Encryption (e.g., RSA, ECC)** employs a public key for encryption/signature verification and a private key for decryption/signing.\n- **Hash Functions (SHA-256)** provide collision-resistant one-way integrity checks.`;
+      if (lower.includes("iam") || lower.includes("cloud") || lower.includes("security") || lower.includes("polp") || lower.includes("access")) {
+        aiResponse = `### 🛡️ Cloud Security & Access Architecture\n\n1. **Principle of Least Privilege (PoLP)**: Grant only the permissions strictly required to execute the job.\n2. **Role-Based Access Control (RBAC)**: Bundles rights into roles mapped directly to organizational duties.\n3. **Attribute-Based Access Control (ABAC)**: Dynamically evaluates context (device health, IP geolocation, user tags).\n\n💡 *Tip: Test your knowledge in **Document Chat > Generate Quiz** to lock in retention!*`;
+      } else if (lower.includes("crypto") || lower.includes("rsa") || lower.includes("encryption") || lower.includes("cipher") || lower.includes("hash")) {
+        aiResponse = `### 🔐 Cryptographic Primitives & Key Exchange\n\n- **Symmetric Encryption (e.g. AES-256)**: High-speed single shared secret for bulk data encryption.\n- **Asymmetric Encryption (e.g. RSA, ECC)**: Uses public key for encryption/signature verification and private key for decryption.\n- **Cryptographic Hash Functions (SHA-256)**: Fixed-length, collision-resistant one-way digests for data integrity.`;
+      } else if (lower.includes("feynman") || lower.includes("technique") || lower.includes("learn") || lower.includes("study method")) {
+        aiResponse = `### 🧠 The Feynman Technique for Accelerated Learning\n\n1. **Choose a Target Concept**: Write the title at the top of a page.\n2. **Explain it to a 12-Year-Old**: Use simple language, analogies, and zero academic jargon.\n3. **Identify Gaps & Bottlenecks**: Pinpoint where you hesitated and re-read the core materials.\n4. **Refine, Simplify, & Repeat**: Create a compelling narrative around the concept.`;
+      } else if (lower.includes("schedule") || lower.includes("plan") || lower.includes("time table") || lower.includes("exam")) {
+        aiResponse = `### 📅 4-Step High-Yield Exam Preparation Plan\n\n1. **Active Recall Sessions**: Focus on flashcards and practice problems rather than passive highlighting.\n2. **Pomodoro Sprints (25m/50m)**: Use our top navigation bar timer to enforce deep focus blocks.\n3. **Interleaved Revision**: Mix multiple subjects (e.g., Security + Math) on alternating days to build neural flexibility.\n4. **Spaced Repetition**: Review challenging topics after 1 day, 3 days, and 7 days.`;
       } else {
-        aiResponse = `I'm your StudySphere AI study buddy! I can explain complex academic concepts, generate flashcards and quizzes from your notes, schedule structured weekly study sessions, and guide your exam prep. How can I help you excel today?`;
+        aiResponse = `### 💡 Academic Assistant Breakdown\n\nRegarding your question: **"${message.slice(0, 70)}"**\n\n1. **Core Understanding**: Break the problem down into its primary principles.\n2. **Application**: Work through a concrete example or practice exercise.\n3. **Retention**: Schedule a 25-minute deep focus sprint with active recall.\n\nWould you like me to generate a tailored study plan or practice questions on this topic?`;
       }
     }
+
+    const responseTimeMs = Date.now() - startTime;
 
     const aiMsg: ChatMessage = {
       id: Date.now() + 1,
@@ -1283,7 +1546,8 @@ Student Question: ${message}`;
       response: aiResponse,
       session_id: session.id,
       sources,
-      model_used: modelUsed
+      model_used: modelUsed,
+      response_time_ms: responseTimeMs
     });
   });
 

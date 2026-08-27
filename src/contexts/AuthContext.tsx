@@ -10,6 +10,8 @@ interface AuthContextType {
   demoLogin: (email?: string, name?: string) => Promise<void>;
   register: (email: string, pass: string, name: string) => Promise<void>;
   googleLogin: (payload?: { credential?: string; email?: string; full_name?: string; avatar_url?: string } | string) => Promise<void>;
+  sendVerificationCode: (email: string, fullName?: string) => Promise<{ success: boolean; message: string; verification_code: string }>;
+  verifyCodeLogin: (email: string, code: string, fullName?: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -26,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (token) {
-      authService.getMe()
+      authService.getProfile()
         .then((userData) => {
           setUser(userData);
           localStorage.setItem('studysphere_user', JSON.stringify(userData));
@@ -48,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(data.user);
   };
 
-  const demoLogin = async (email = 'student@studysphere.ai', name = 'Jetsan') => {
+  const demoLogin = async (email = 'guest@studysphere.ai', name = 'Guest Scholar') => {
     try {
       const data = await authService.demoLogin(email, name);
       localStorage.setItem('studysphere_token', data.access_token);
@@ -61,13 +63,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: 1,
         email,
         full_name: name,
-        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
+        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
         is_active: true,
         created_at: new Date().toISOString(),
         profile: {
           major: 'Cloud & Cyber Security',
           university: 'Stanford University',
-          bio: 'Student passionate about cloud security, IAM architecture, and zero trust.',
+          bio: 'Student scholar on StudySphere AI.',
           daily_goal_minutes: 180,
           break_interval_minutes: 30,
           default_session_minutes: 45,
@@ -139,31 +141,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(data.access_token);
       setUser(data.user);
     } catch (err) {
-      console.warn('Backend google auth failed, initializing Google session fallback:', err);
-      const email = typeof payload === 'object' && payload?.email ? payload.email : 'jetsanranious@gmail.com';
-      const name = typeof payload === 'object' && payload?.full_name ? payload.full_name : 'Jetsan Ranious';
-      const avatar = typeof payload === 'object' && payload?.avatar_url ? payload.avatar_url : `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`;
+      console.warn('Backend google auth error, creating local authenticated user:', err);
+      
+      let email = 'scholar@gmail.com';
+      let name = 'Google Scholar';
+      let avatar = '';
+
+      if (typeof payload === 'string') {
+        // Try decoding JWT payload if client passed a raw string credential
+        try {
+          const parts = payload.split('.');
+          if (parts.length === 3) {
+            const decoded = JSON.parse(atob(parts[1]));
+            email = decoded.email || email;
+            name = decoded.name || decoded.given_name || name;
+            avatar = decoded.picture || avatar;
+          }
+        } catch (e) {
+          // ignore decode error
+        }
+      } else if (typeof payload === 'object' && payload) {
+        if (payload.email) email = payload.email;
+        if (payload.full_name) {
+          name = payload.full_name;
+        } else if (payload.email) {
+          name = payload.email.split('@')[0].replace(/[._-]/g, ' ');
+          name = name.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+        if (payload.avatar_url) avatar = payload.avatar_url;
+      }
+
+      if (!avatar) {
+        avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name || email)}`;
+      }
+
       const googleUser: User = {
-        id: 2,
+        id: Date.now(),
         email,
         full_name: name,
         avatar_url: avatar,
         is_active: true,
         created_at: new Date().toISOString(),
         profile: {
-          major: 'Cloud & Cyber Security',
-          university: 'Stanford University',
+          major: 'Computer Science & Security',
+          university: 'University',
           bio: 'Google authenticated scholar on StudySphere AI.',
           daily_goal_minutes: 180,
           break_interval_minutes: 30,
           default_session_minutes: 45,
           theme_preference: 'system',
-          xp: 350,
+          xp: 150,
           level: 2,
         },
         streak: {
-          current_streak: 5,
-          longest_streak: 9,
+          current_streak: 3,
+          longest_streak: 5,
           last_activity_date: new Date().toISOString(),
         },
       };
@@ -175,16 +207,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const sendVerificationCode = async (email: string, fullName?: string) => {
+    return await authService.sendVerificationCode(email, fullName);
+  };
+
+  const verifyCodeLogin = async (email: string, code: string, fullName?: string) => {
+    const data = await authService.verifyCode(email, code, fullName);
+    localStorage.setItem('studysphere_token', data.access_token);
+    localStorage.setItem('studysphere_user', JSON.stringify(data.user));
+    setToken(data.access_token);
+    setUser(data.user);
+  };
+
   const logout = () => {
     localStorage.removeItem('studysphere_token');
     localStorage.removeItem('studysphere_user');
+    localStorage.removeItem('studysphere_saved_google_email');
+    localStorage.removeItem('studysphere_saved_google_name');
     setToken(null);
     setUser(null);
   };
 
   const refreshUser = async () => {
     try {
-      const userData = await authService.getMe();
+      const userData = await authService.getProfile();
       setUser(userData);
       localStorage.setItem('studysphere_user', JSON.stringify(userData));
     } catch (e) {
@@ -193,7 +239,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, demoLogin, register, googleLogin, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, demoLogin, register, googleLogin, sendVerificationCode, verifyCodeLogin, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
